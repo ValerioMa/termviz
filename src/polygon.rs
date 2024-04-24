@@ -1,11 +1,35 @@
-use crate::{
-    config::ListenerConfigColor, transformation::ros_transform_to_isometry,
-};
+use crate::config::ParameterConfigColor;
+use crate::{config::ListenerConfigColor, transformation::ros_transform_to_isometry};
 use nalgebra::Point3;
 use rustros_tf;
 use std::sync::{Arc, RwLock};
-use tui::widgets::canvas::Line;
 use tui::style::Color;
+use tui::widgets::canvas::Line;
+
+pub fn get_polygon_from_ros_param(param: &String) -> Option<rosrust_msg::geometry_msgs::Polygon> {
+    let ros_param_polygon = rosrust::param(param);
+    if let Some(ros_param_polygon) = &ros_param_polygon {
+        let mut polygon = rosrust_msg::geometry_msgs::Polygon { points: vec![] };
+        let fb = ros_param_polygon.get::<Vec<Vec<f64>>>();
+        match fb {
+            Ok(f) => {
+                for pt in f {
+                    polygon.points.push(rosrust_msg::geometry_msgs::Point32 {
+                        x: pt[0] as f32,
+                        y: pt[1] as f32,
+                        z: 0 as f32,
+                    });
+                }
+                return Some(polygon);
+            }
+            Err(_e) => {
+                println!("{} not found, not showing polygon.", param);
+                return None;
+            }
+        }
+    }
+    return None;
+}
 
 pub fn read_points(msg: &rosrust_msg::geometry_msgs::Polygon) -> Vec<Point3<f64>> {
     let n_pts = msg.points.len();
@@ -27,6 +51,10 @@ pub struct PolygonData {
 pub struct PolygonListener {
     _data: Arc<RwLock<PolygonData>>,
     _subscriber: rosrust::Subscriber,
+}
+
+pub struct ParameterPolygon {
+    _data: Arc<RwLock<PolygonData>>,
 }
 
 impl PolygonData {
@@ -72,6 +100,44 @@ impl PolygonData {
         return vec![];
     }
 }
+
+impl ParameterPolygon {
+    pub fn new(
+        config: ParameterConfigColor,
+        tf_listener: Arc<rustros_tf::TfListener>,
+        static_frame: String,
+    ) -> ParameterPolygon {
+        let data = Arc::new(RwLock::new(PolygonData {
+            polygon_stamped_msg: None,
+            lines_in_static_frame: None,
+            _tf_listener: tf_listener,
+            _static_frame: static_frame,
+            _color: config.color.to_tui(),
+        }));
+
+        let polygon = get_polygon_from_ros_param(&config.parameter);
+        if let Some(polygon) = polygon {
+            data.write().unwrap().polygon_stamped_msg =
+                Some(rosrust_msg::geometry_msgs::PolygonStamped {
+                    header: rosrust_msg::std_msgs::Header {
+                        seq: 0,
+                        stamp: rosrust::Time::new(),
+                        frame_id: config.frame.clone(),
+                    },
+                    polygon: polygon,
+                });
+        }
+
+        return ParameterPolygon { _data: data };
+    }
+
+    pub fn get_lines(&self) -> Vec<Line> {
+        let mut unlocked_data = self._data.write().unwrap();
+        unlocked_data.update();
+        return unlocked_data.get_lines();
+    }
+}
+
 impl PolygonListener {
     pub fn new(
         config: ListenerConfigColor,

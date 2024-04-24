@@ -1,12 +1,12 @@
 use crate::config::{
-    ListenerConfig, ListenerConfigColor, MapListenerConfig, PointCloud2ListenerConfig,
-    PoseListenerConfig,
+    ListenerConfig, ListenerConfigColor, MapListenerConfig, ParameterConfigColor,
+    PointCloud2ListenerConfig, PoseListenerConfig,
 };
 use crate::laser;
 use crate::map;
 use crate::marker;
 use crate::pointcloud;
-use crate::polygon;
+use crate::polygon::{self, ParameterPolygon};
 use crate::pose;
 
 use std::sync::Arc;
@@ -19,6 +19,7 @@ pub struct Listeners {
     pub pose_array: Vec<pose::PoseArrayListener>,
     pub pointclouds: Vec<pointcloud::PointCloud2Listener>,
     pub polygons: Vec<polygon::PolygonListener>,
+    pub polygon_from_parameters: Vec<ParameterPolygon>,
     pub paths: Vec<pose::PathListener>,
 }
 
@@ -34,6 +35,7 @@ impl Listeners {
         pose_array_topics: Vec<PoseListenerConfig>,
         pointcloud2_topics: Vec<PointCloud2ListenerConfig>,
         polygon_stamped_topics: Vec<ListenerConfigColor>,
+        polygon_from_parameters_configs: Vec<ParameterConfigColor>,
         path_topics: Vec<PoseListenerConfig>,
     ) -> Listeners {
         let mut lasers: Vec<laser::LaserListener> = Vec::new();
@@ -81,6 +83,15 @@ impl Listeners {
             ));
         }
 
+        let mut polygon_from_parameters: Vec<polygon::ParameterPolygon> = Vec::new();
+        for polygon_config in polygon_from_parameters_configs {
+            polygon_from_parameters.push(polygon::ParameterPolygon::new(
+                polygon_config,
+                tf_listener.clone(),
+                static_frame.clone(),
+            ));
+        }
+
         let pose_stamped = pose_stamped_topics
             .into_iter()
             .map(|topic| pose::PoseStampedListener::new(topic))
@@ -101,6 +112,7 @@ impl Listeners {
             pose_array,
             pointclouds,
             polygons,
+            polygon_from_parameters,
             paths,
         }
     }

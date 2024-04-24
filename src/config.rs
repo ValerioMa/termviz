@@ -7,6 +7,14 @@ use std::io::Write;
 use std::path::Path;
 use tui::style::Color as TuiColor;
 
+fn default_map_frame() -> String {
+    "map".to_string()
+}
+
+fn default_robot_frame() -> String {
+    "base_footprint".to_string()
+}
+
 fn default_int() -> i64 {
     0
 }
@@ -86,6 +94,13 @@ pub struct ListenerConfigColor {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ParameterConfigColor {
+    pub parameter: String,
+    pub frame: String,
+    pub color: Color,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MapListenerConfig {
     pub topic: String,
     #[serde(default = "color_white")]
@@ -125,6 +140,7 @@ pub struct TermvizConfig {
     pub path_topics: Vec<PoseListenerConfig>,
     pub pointcloud2_topics: Vec<PointCloud2ListenerConfig>,
     pub polygon_stamped_topics: Vec<ListenerConfigColor>,
+    pub polygon_from_parameters_configs: Vec<ParameterConfigColor>,
     pub pose_array_topics: Vec<PoseListenerConfig>,
     pub pose_stamped_topics: Vec<PoseListenerConfig>,
     pub send_pose_topics: Vec<SendPoseConfig>,
@@ -139,8 +155,8 @@ pub struct TermvizConfig {
 impl Default for TermvizConfig {
     fn default() -> Self {
         TermvizConfig {
-            fixed_frame: "map".to_string(),
-            robot_frame: "base_link".to_string(),
+            fixed_frame: default_map_frame(),
+            robot_frame: default_robot_frame(),
             map_topics: vec![MapListenerConfig {
                 topic: "map".to_string(),
                 color: Color {
@@ -189,6 +205,11 @@ impl Default for TermvizConfig {
             polygon_stamped_topics: vec![ListenerConfigColor {
                 topic: "footprint".to_string(),
                 color: Color { r: 200, b: 0, g: 0 },
+            }],
+            polygon_from_parameters_configs: vec![ParameterConfigColor {
+                parameter: "/footprint".to_string(),
+                frame: default_robot_frame(),
+                color: Color { r: 0, g: 0, b: 200 },
             }],
             send_pose_topics: vec![SendPoseConfig {
                 topic: "initialpose".to_string(),

@@ -2,7 +2,6 @@
 //! A mode can borrow the viewport to draw whatever is needed.
 
 use crate::app_modes::{input, AppMode, Drawable};
-use crate::footprint::get_current_footprint;
 use crate::listeners::Listeners;
 use crate::transformation;
 use std::sync::Arc;
@@ -67,7 +66,6 @@ pub struct Viewport {
     pub robot_frame: String,
     pub tf_listener: Arc<rustros_tf::TfListener>,
     pub initial_bounds: Vec<f64>,
-    pub footprint: Vec<(f64, f64)>,
     pub axis_length: f64,
     pub zoom: f64,
     pub zoom_factor: f64,
@@ -81,7 +79,6 @@ impl Viewport {
         robot_frame: &String,
         tf_listener: Arc<rustros_tf::TfListener>,
         initial_bounds: &Vec<f64>,
-        footprint: &Vec<(f64, f64)>,
         axis_length: f64,
         zoom_factor: f64,
         listeners: Listeners,
@@ -94,7 +91,6 @@ impl Viewport {
             initial_bounds: initial_bounds.clone(),
             zoom: 1.0,
             zoom_factor: zoom_factor,
-            footprint: footprint.clone(),
             axis_length: axis_length,
             listeners: listeners,
             terminal_size: terminal_size,
@@ -250,17 +246,6 @@ impl UseViewport for Viewport {
             .lookup_transform(&self.static_frame, &self.robot_frame, rosrust::Time::new())
             .unwrap()
             .transform;
-        get_current_footprint(&base_link_pose, &self.footprint);
-
-        for elem in get_current_footprint(&base_link_pose, &self.footprint) {
-            ctx.draw(&Line {
-                x1: elem.0,
-                y1: elem.1,
-                x2: elem.2,
-                y2: elem.3,
-                color: Color::Blue,
-            });
-        }
 
         for line in Viewport::get_frame_lines(&base_link_pose, self.axis_length) {
             ctx.draw(&line);
@@ -273,6 +258,12 @@ impl UseViewport for Viewport {
         }
 
         for polygon in &self.listeners.polygons {
+            for line in polygon.get_lines() {
+                ctx.draw(&line);
+            }
+        }
+
+        for polygon in &self.listeners.polygon_from_parameters {
             for line in polygon.get_lines() {
                 ctx.draw(&line);
             }
