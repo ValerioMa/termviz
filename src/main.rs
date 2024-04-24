@@ -1,7 +1,6 @@
 mod app;
 mod app_modes;
 mod config;
-mod footprint;
 mod image;
 mod laser;
 mod listeners;

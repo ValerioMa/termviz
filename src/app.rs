@@ -1,6 +1,5 @@
 use crate::app_modes;
 use crate::config::TermvizConfig;
-use crate::footprint::get_footprint;
 use crate::listeners::Listeners;
 use crossterm::{
     event::EnableMouseCapture,
@@ -42,6 +41,7 @@ impl<B: Backend> App<B> {
             config.pose_array_topics,
             config.pointcloud2_topics,
             config.polygon_stamped_topics,
+            config.polygon_from_parameters_configs,
             config.path_topics,
         );
         let viewport = Rc::new(RefCell::new(app_modes::viewport::Viewport::new(
@@ -49,7 +49,6 @@ impl<B: Backend> App<B> {
             &config.robot_frame,
             tf_listener,
             &config.visible_area,
-            &get_footprint(),
             config.axis_length,
             config.zoom_factor,
             listeners,

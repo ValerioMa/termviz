@@ -3,7 +3,6 @@
 use crate::app_modes::viewport::{UseViewport, Viewport};
 use crate::app_modes::{input, AppMode, BaseMode};
 use crate::config::SendPoseConfig;
-use crate::footprint::get_current_footprint;
 use crate::transformation;
 use approx::AbsDiffEq;
 use nalgebra::{Isometry2, Vector2};
@@ -305,27 +304,27 @@ impl AppMode for SendPose {
 
 impl UseViewport for SendPose {
     fn draw_in_viewport(&self, ctx: &mut Context) {
-        self.viewport.borrow().draw_in_viewport(ctx);
-        if self.new_pose.abs_diff_ne(&self.robot_pose, 0.01) {
-            let pose_estimate_ros = transformation::iso2d_to_ros(&self.new_pose);
-            for elem in
-                &get_current_footprint(&pose_estimate_ros, &self.viewport.borrow().footprint)
-            {
-                ctx.draw(&Line {
-                    x1: elem.0,
-                    y1: elem.1,
-                    x2: elem.2,
-                    y2: elem.3,
-                    color: Color::Gray,
-                });
-            }
-            for mut line in
-                Viewport::get_frame_lines(&pose_estimate_ros, self.viewport.borrow().axis_length)
-            {
-                line.color = Color::Gray;
-                ctx.draw(&line);
-            }
-        }
+        // self.viewport.borrow().draw_in_viewport(ctx);
+        // if self.new_pose.abs_diff_ne(&self.robot_pose, 0.01) {
+        //     let pose_estimate_ros = transformation::iso2d_to_ros(&self.new_pose);
+        //     for elem in
+        //         &get_current_footprint(&pose_estimate_ros, &self.viewport.borrow().footprint)
+        //     {
+        //         ctx.draw(&Line {
+        //             x1: elem.0,
+        //             y1: elem.1,
+        //             x2: elem.2,
+        //             y2: elem.3,
+        //             color: Color::Gray,
+        //         });
+        //     }
+        //     for mut line in
+        //         Viewport::get_frame_lines(&pose_estimate_ros, self.viewport.borrow().axis_length)
+        //     {
+        //         line.color = Color::Gray;
+        //         ctx.draw(&line);
+        //     }
+        // }
     }
     fn x_bounds(&self) -> [f64; 2] {
         let scale_factor = self.viewport.borrow().terminal_size.0 as f64
