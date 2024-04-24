@@ -15,7 +15,6 @@ fn default_robot_frame() -> String {
     "base_footprint".to_string()
 }
 
-
 fn default_int() -> i64 {
     0
 }
@@ -207,7 +206,7 @@ impl Default for TermvizConfig {
                 topic: "footprint".to_string(),
                 color: Color { r: 200, b: 0, g: 0 },
             }],
-            polygon_from_parameters_configs: vec![ParameterConfigColor{
+            polygon_from_parameters_configs: vec![ParameterConfigColor {
                 parameter: "/footprint".to_string(),
                 frame: default_robot_frame(),
                 color: Color { r: 0, g: 0, b: 200 },

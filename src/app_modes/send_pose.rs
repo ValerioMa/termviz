@@ -5,12 +5,12 @@ use crate::app_modes::{input, AppMode, BaseMode};
 use crate::config::SendPoseConfig;
 use crate::transformation;
 use approx::AbsDiffEq;
-use nalgebra::{Isometry2, Vector2};
+use nalgebra::{Isometry2, Point2, Vector2};
 use std::cell::RefCell;
 use std::rc::Rc;
 use tui::backend::Backend;
 use tui::style::Color;
-use tui::widgets::canvas::{Context, Line};
+use tui::widgets::canvas::{Context, Line, Points};
 
 trait BasePosePubWrapper {
     fn get_topic(&self) -> &String;
@@ -302,29 +302,74 @@ impl AppMode for SendPose {
     }
 }
 
+fn change_line_color(line: &Line, color: &Color) -> Line {
+    return Line {
+        x1: line.x1,
+        y1: line.y1,
+        x2: line.x2,
+        y2: line.y2,
+        color: color.clone(),
+    };
+}
+
+fn transform_line(line: &Line, transform: &Isometry2<f64>) -> Line {
+    let p1 = transform.transform_point(&Point2::new(line.x1 as f64, line.y1 as f64));
+    let p2 = transform.transform_point(&Point2::new(line.x2 as f64, line.y2 as f64));
+    return Line {
+        x1: p1.x,
+        y1: p1.y,
+        x2: p2.x,
+        y2: p2.y,
+        color: line.color.clone(),
+    };
+}
+
 impl UseViewport for SendPose {
     fn draw_in_viewport(&self, ctx: &mut Context) {
-        // self.viewport.borrow().draw_in_viewport(ctx);
-        // if self.new_pose.abs_diff_ne(&self.robot_pose, 0.01) {
-        //     let pose_estimate_ros = transformation::iso2d_to_ros(&self.new_pose);
-        //     for elem in
-        //         &get_current_footprint(&pose_estimate_ros, &self.viewport.borrow().footprint)
-        //     {
-        //         ctx.draw(&Line {
-        //             x1: elem.0,
-        //             y1: elem.1,
-        //             x2: elem.2,
-        //             y2: elem.3,
-        //             color: Color::Gray,
-        //         });
-        //     }
-        //     for mut line in
-        //         Viewport::get_frame_lines(&pose_estimate_ros, self.viewport.borrow().axis_length)
-        //     {
-        //         line.color = Color::Gray;
-        //         ctx.draw(&line);
-        //     }
-        // }
+        let viewport = self.viewport.borrow();
+        viewport.draw_in_viewport(ctx);
+        if self.new_pose.abs_diff_ne(&self.robot_pose, 0.01) {
+            let pose_estimate_ros = transformation::iso2d_to_ros(&self.new_pose);
+            let transform = self.new_pose * self.robot_pose.inverse();
+
+            for polygon in &viewport.listeners.polygon_from_parameters {
+                for line in polygon.get_lines() {
+                    ctx.draw(&change_line_color(&line, &Color::Gray));
+                    ctx.draw(&transform_line(&line, &transform));
+                }
+            }
+
+            for laser in &viewport.listeners.lasers {
+                let points = Points {
+                    coords: &laser.points.read().unwrap(),
+                    color: Color::Rgb(
+                        laser.config.color.r,
+                        laser.config.color.g,
+                        laser.config.color.b,
+                    ),
+                };
+                let mut colored_points = points.clone();
+                colored_points.color = Color::Gray;
+                ctx.draw(&colored_points);
+
+                let mut coordinates: Vec<(f64, f64)> = vec![];
+                for pt in points.coords {
+                    let transformed_point = transform.transform_point(&Point2::new(pt.0, pt.1));
+                    coordinates.push((transformed_point.x, transformed_point.y));
+                }
+                ctx.draw(&Points {
+                    coords: &coordinates,
+                    color: points.color.clone(),
+                });
+            }
+
+            for mut line in
+                Viewport::get_frame_lines(&pose_estimate_ros, self.viewport.borrow().axis_length)
+            {
+                line.color = Color::Gray;
+                ctx.draw(&line);
+            }
+        }
     }
     fn x_bounds(&self) -> [f64; 2] {
         let scale_factor = self.viewport.borrow().terminal_size.0 as f64

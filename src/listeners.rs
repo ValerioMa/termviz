@@ -1,5 +1,6 @@
 use crate::config::{
-    ListenerConfig, ListenerConfigColor, MapListenerConfig, ParameterConfigColor, PointCloud2ListenerConfig, PoseListenerConfig
+    ListenerConfig, ListenerConfigColor, MapListenerConfig, ParameterConfigColor,
+    PointCloud2ListenerConfig, PoseListenerConfig,
 };
 use crate::laser;
 use crate::map;
